@@ -204,6 +204,25 @@ export async function searchCommunityPosts(cursor?: string): Promise<{ posts: Bl
   }
 }
 
+export async function getUserPosts(did: string, cursor?: string): Promise<{ posts: BlueskyPost[]; cursor?: string }> {
+  if (!agent) throw new Error('Not logged in');
+
+  try {
+    const response = await agent.getAuthorFeed({
+      actor: did,
+      limit: 25,
+      cursor,
+      filter: 'posts_with_replies',
+    });
+
+    const posts: BlueskyPost[] = (response.data.feed || []).map((item: any) => mapPost(item.post));
+    return { posts, cursor: response.data.cursor };
+  } catch (error) {
+    console.error('Failed to get user posts:', error);
+    return { posts: [] };
+  }
+}
+
 export async function getTimeline(cursor?: string): Promise<{ posts: BlueskyPost[]; cursor?: string }> {
   if (!agent) throw new Error('Not logged in');
 

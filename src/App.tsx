@@ -12,7 +12,7 @@ import MobileNav from './components/MobileNav';
 import LoginScreen from './components/LoginScreen';
 
 export default function App() {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [currentView, setCurrentView] = useState<ViewType>('feed');
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -35,9 +35,13 @@ export default function App() {
           setSession(restored);
           // Load community posts from Bluesky
           await loadCommunityPosts();
+        } else {
+          // No session, show initial posts for demo
+          setPosts(initialPosts);
         }
       } catch (err) {
         console.error('Failed to restore session:', err);
+        setPosts(initialPosts);
       } finally {
         setIsLoading(false);
       }
@@ -47,9 +51,19 @@ export default function App() {
   // Load community posts from Bluesky
   const loadCommunityPosts = async () => {
     try {
-      const { posts: bskyPosts } = await bsky.searchCommunityPosts();
-      if (bskyPosts.length > 0) {
-        const mappedPosts: Post[] = bskyPosts.map((p) => ({
+      // Fetch both community posts and user's own posts
+      const [communityResult, userResult] = await Promise.all([
+        bsky.searchCommunityPosts(),
+        session ? bsky.getUserPosts(session.did) : Promise.resolve({ posts: [] })
+      ]);
+
+      // Combine and deduplicate posts
+      const allPosts = [...communityResult.posts, ...userResult.posts];
+      const uniquePosts = new Map();
+      allPosts.forEach(p => uniquePosts.set(p.uri, p));
+
+      if (uniquePosts.size > 0) {
+        const mappedPosts: Post[] = Array.from(uniquePosts.values()).map((p) => ({
           id: p.uri,
           author: {
             id: p.author.did,
@@ -65,7 +79,10 @@ export default function App() {
           liked: !!p.viewer?.like,
           reposted: !!p.viewer?.repost,
         }));
-        setPosts((prev) => [...mappedPosts, ...prev]);
+        
+        // Sort by date (newest first)
+        mappedPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setPosts((prev) => [...mappedPosts, ...prev.filter(p => !p.id.startsWith('at://'))]);
       }
     } catch (err) {
       console.error('Failed to load community posts:', err);
@@ -89,6 +106,7 @@ export default function App() {
 
   const handleDemo = () => {
     setIsGuest(true);
+    setPosts(initialPosts);
     setIsLoading(false);
   };
 
@@ -96,7 +114,7 @@ export default function App() {
     bsky.logout();
     setSession(null);
     setIsGuest(false);
-    setPosts(initialPosts);
+    setPosts([]);
   }, []);
 
   const handleLike = useCallback(async (postId: string) => {
@@ -207,68 +225,118 @@ export default function App() {
       // If logged in with Bluesky, post to the network
       if (session) {
         setIsPosting(true);
+        let postUri = '';
+        
         try {
           if (replyTo && replyTo.id.startsWith('at://')) {
-            await bsky.createReply(fullContent, replyTo.id, replyTo.id, [bsky.COMMUNITY_TAG]);
+            postUri = await bsky.createReply(fullContent, replyTo.id, replyTo.id, [bsky.COMMUNITY_TAG]);
           } else {
-            await bsky.createPost(fullContent, [bsky.COMMUNITY_TAG]);
+            postUri = await bsky.createPost(fullContent, [bsky.COMMUNITY_TAG]);
           }
-          // Reload posts to get the new one
-          await loadCommunityPosts();
+          
+          // Immediately add the post to local state with the real URI
+          const authorInfo = {
+            id: session.did,
+            displayName: session.displayName,
+            handle: `@${session.handle}`,
+            avatar: session.avatar || '🦋'
+          };
+
+          if (replyTo) {
+            const newReply: Post = {
+              id: postUri,
+              author: authorInfo,
+              content,
+              createdAt: new Date(),
+              eventTag,
+              eventDate,
+              eventLocation,
+              eventLink,
+              replies: [],
+              likes: 0,
+              reposts: 0,
+              liked: false,
+              reposted: false,
+            };
+            setPosts((prev) =>
+              prev.map((post) =>
+                post.id === replyTo.id
+                  ? { ...post, replies: [...post.replies, newReply] }
+                  : post
+              )
+            );
+            setReplyTo(null);
+          } else {
+            const newPost: Post = {
+              id: postUri,
+              author: authorInfo,
+              content,
+              createdAt: new Date(),
+              eventTag,
+              eventDate,
+              eventLocation,
+              eventLink,
+              replies: [],
+              likes: 0,
+              reposts: 0,
+              liked: false,
+              reposted: false,
+            };
+            setPosts((prev) => [newPost, ...prev]);
+          }
+          
+          // Reload to get full data (likes, replies, etc.)
+          setTimeout(() => loadCommunityPosts(), 1000);
         } catch (err) {
           console.error('Failed to post:', err);
           alert('Failed to post. Please try again.');
         } finally {
           setIsPosting(false);
         }
-      }
-
-      // Also add locally for immediate feedback
-      if (replyTo) {
-        const newReply: Post = {
-          id: `reply-${Date.now()}`,
-          author: session
-            ? { id: session.did, displayName: session.displayName, handle: `@${session.handle}`, avatar: session.avatar || '🦋' }
-            : currentUser,
-          content,
-          createdAt: new Date(),
-          eventTag,
-          eventDate,
-          eventLocation,
-          eventLink,
-          replies: [],
-          likes: 0,
-          reposts: 0,
-          liked: false,
-          reposted: false,
-        };
-        setPosts((prev) =>
-          prev.map((post) =>
-            post.id === replyTo.id
-              ? { ...post, replies: [...post.replies, newReply] }
-              : post
-          )
-        );
-        setReplyTo(null);
       } else {
-        const newPost: Post = {
-          id: `post-${Date.now()}`,
-          author: session
-            ? { id: session.did, displayName: session.displayName, handle: `@${session.handle}`, avatar: session.avatar || '🦋' }
-            : currentUser,
-          content,
-          createdAt: new Date(),
-          eventTag,
-          eventDate,
-          eventLocation,
-          eventLink,
-          replies: [],
-          likes: 0,
-          reposts: 0,
-          liked: false,
-          reposted: false,
-        };
-        setPosts((prev) => [newPost, ...prev]);
+        // Guest mode - just add locally
+        if (replyTo) {
+          const newReply: Post = {
+            id: `reply-${Date.now()}`,
+            author: currentUser,
+            content,
+            createdAt: new Date(),
+            eventTag,
+            eventDate,
+            eventLocation,
+            eventLink,
+            replies: [],
+            likes: 0,
+            reposts: 0,
+            liked: false,
+            reposted: false,
+          };
+          setPosts((prev) =>
+            prev.map((post) =>
+              post.id === replyTo.id
+                ? { ...post, replies: [...post.replies, newReply] }
+                : post
+            )
+          );
+          setReplyTo(null);
+        } else {
+          const newPost: Post = {
+            id: `post-${Date.now()}`,
+            author: currentUser,
+            content,
+            createdAt: new Date(),
+            eventTag,
+            eventDate,
+            eventLocation,
+            eventLink,
+            replies: [],
+            likes: 0,
+            reposts: 0,
+            liked: false,
+            reposted: false,
+          };
+          setPosts((prev) => [newPost, ...prev]);
+        }
       }
     },
     [replyTo, session]
@@ -350,19 +418,30 @@ export default function App() {
             <>
               {/* Feed Header */}
               <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 z-10">
-                <div className="px-4 py-3">
-                  <h2 className="font-bold text-gray-900 dark:text-white text-lg">Home</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {session ? (
-                      <>
-                        📡 Connected as <span className="text-blue-500">@{session.handle}</span> • Posts tagged with #{bsky.COMMUNITY_TAG}
-                      </>
-                    ) : (
-                      <>
-                        👀 Browsing as guest • <button onClick={() => { setIsGuest(false); }} className="text-blue-500 hover:underline">Sign in to post</button>
-                      </>
-                    )}
-                  </p>
+                <div className="px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-bold text-gray-900 dark:text-white text-lg">Home</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {session ? (
+                        <>
+                          📡 Connected as <span className="text-blue-500">@{session.handle}</span> • Posts tagged with #{bsky.COMMUNITY_TAG}
+                        </>
+                      ) : (
+                        <>
+                          👀 Browsing as guest • <button onClick={() => { setIsGuest(false); }} className="text-blue-500 hover:underline">Sign in to post</button>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  {session && (
+                    <button
+                      onClick={loadCommunityPosts}
+                      className="text-gray-400 hover:text-blue-500 transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                      title="Refresh feed"
+                    >
+                      🔄
+                    </button>
+                  )}
                 </div>
                 {/* Tabs */}
                 <div className="flex border-b border-gray-100 dark:border-gray-800">
@@ -390,13 +469,29 @@ export default function App() {
               </div>
 
               {/* Feed */}
-              <Feed
-                posts={filteredPosts}
-                onReply={handleReply}
-                onLike={handleLike}
-                onRepost={handleRepost}
-                onThread={handleThread}
-              />
+              {filteredPosts.length === 0 && session ? (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+                  <span className="text-5xl mb-4">🌱</span>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No community posts yet</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+                    Be the first to post! Your post will be tagged with <span className="text-blue-500">#{bsky.COMMUNITY_TAG}</span> and visible to everyone on Bluesky.
+                  </p>
+                  <button
+                    onClick={handleOpenCompose}
+                    className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-6 rounded-full transition-all"
+                  >
+                    ✍️ Make the first post
+                  </button>
+                </div>
+              ) : (
+                <Feed
+                  posts={filteredPosts}
+                  onReply={handleReply}
+                  onLike={handleLike}
+                  onRepost={handleRepost}
+                  onThread={handleThread}
+                />
+              )}
             </>
           )}
 
