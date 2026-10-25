@@ -6,9 +6,10 @@ interface ComposeModalProps {
   onClose: () => void;
   onSubmit: (content: string, eventTag?: string, eventDate?: string, eventLocation?: string, eventLink?: string) => void;
   replyTo?: Post | null;
+  isPosting?: boolean;
 }
 
-export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: ComposeModalProps) {
+export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo, isPosting = false }: ComposeModalProps) {
   const [content, setContent] = useState('');
   const [showEventFields, setShowEventFields] = useState(false);
   const [eventTag, setEventTag] = useState('');
@@ -31,7 +32,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
   };
 
   const charCount = content.length;
-  const maxChars = 500;
+  const maxChars = 300;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4">
@@ -45,15 +46,16 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-lg"
+            disabled={isPosting}
           >
             ✕
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!content.trim() || charCount > maxChars}
+            disabled={!content.trim() || charCount > maxChars || isPosting}
             className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-1.5 rounded-full transition-all"
           >
-            {replyTo ? 'Reply' : 'Post'}
+            {isPosting ? 'Posting...' : replyTo ? 'Reply' : 'Post'}
           </button>
         </div>
 
@@ -73,7 +75,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
         <div className="p-4">
           <div className="flex gap-3">
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center text-xl">
-              🧑‍💻
+              🦋
             </div>
             <textarea
               value={content}
@@ -81,6 +83,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
               placeholder={replyTo ? 'Write your reply...' : 'What\'s happening in the community?'}
               className="flex-1 resize-none bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm leading-relaxed outline-none min-h-[100px]"
               autoFocus
+              disabled={isPosting}
             />
           </div>
 
@@ -93,6 +96,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
                 onChange={(e) => setEventTag(e.target.value)}
                 placeholder="Event name"
                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
+                disabled={isPosting}
               />
               <input
                 type="text"
@@ -100,6 +104,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
                 onChange={(e) => setEventDate(e.target.value)}
                 placeholder="Date (e.g., October 9, 2025)"
                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
+                disabled={isPosting}
               />
               <input
                 type="text"
@@ -107,6 +112,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
                 onChange={(e) => setEventLocation(e.target.value)}
                 placeholder="Location"
                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
+                disabled={isPosting}
               />
               <input
                 type="url"
@@ -114,6 +120,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
                 onChange={(e) => setEventLink(e.target.value)}
                 placeholder="Link to event (optional)"
                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
+                disabled={isPosting}
               />
             </div>
           )}
@@ -130,6 +137,7 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
               }`}
               title="Tag an event"
+              disabled={isPosting}
             >
               📅
             </button>

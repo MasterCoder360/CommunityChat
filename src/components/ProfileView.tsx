@@ -1,11 +1,15 @@
 import { Post } from '../types';
+import { BlueskySession } from '../bluesky';
 
 interface ProfileViewProps {
   posts: Post[];
+  session?: BlueskySession | null;
 }
 
-export default function ProfileView({ posts }: ProfileViewProps) {
-  const userPosts = posts.filter((p) => p.author?.id === 'user-1');
+export default function ProfileView({ posts, session }: ProfileViewProps) {
+  const userPosts = session
+    ? posts.filter((p) => p.author?.id === session.did)
+    : posts.filter((p) => p.author?.id === 'user-1');
 
   return (
     <div>
@@ -17,16 +21,35 @@ export default function ProfileView({ posts }: ProfileViewProps) {
       {/* Profile Card */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-3xl shadow-lg">
-            🧑‍💻
-          </div>
+          {session?.avatar ? (
+            <img
+              src={session.avatar}
+              alt=""
+              className="w-16 h-16 rounded-full shadow-lg"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-3xl shadow-lg">
+              {session ? '🦋' : '🧑‍💻'}
+            </div>
+          )}
           <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">You</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">@you.cosmospark</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              {session ? session.displayName : 'You'}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {session ? `@${session.handle}` : '@you.cosmospark'}
+            </p>
+            {session && (
+              <p className="text-xs text-green-600 dark:text-green-400 mt-0.5 flex items-center gap-1">
+                <span>✓</span> Connected via Bluesky
+              </p>
+            )}
           </div>
         </div>
         <p className="mt-3 text-sm text-gray-700 dark:text-gray-300">
-          Community member in Jersey City. Interested in local events and making connections. 🏙️
+          {session
+            ? 'Community member posting via the AT Protocol. Your posts are public and visible on Bluesky.'
+            : 'Community member in Jersey City. Interested in local events and making connections. 🏙️'}
         </p>
         <div className="flex items-center gap-4 mt-3 text-sm">
           <span className="text-gray-500 dark:text-gray-400">
@@ -50,7 +73,9 @@ export default function ProfileView({ posts }: ProfileViewProps) {
           <span className="text-5xl mb-4">📝</span>
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No posts yet</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 text-center">
-            Start sharing with the community!
+            {session
+              ? 'Start sharing with the community! Your posts will be visible on Bluesky.'
+              : 'Sign in with Bluesky to start posting publicly!'}
           </p>
         </div>
       )}

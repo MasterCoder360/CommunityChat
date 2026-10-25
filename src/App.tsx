@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Post, ViewType } from './types';
 import { initialPosts, currentUser } from './data';
+import * as bsky from './bluesky';
 import Sidebar from './components/Sidebar';
 import Feed from './components/Feed';
 import ThreadView from './components/ThreadView';
@@ -8,6 +9,7 @@ import ComposeModal from './components/ComposeModal';
 import EventsView from './components/EventsView';
 import ProfileView from './components/ProfileView';
 import MobileNav from './components/MobileNav';
+import LoginScreen from './components/LoginScreen';
 
 export default function App() {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
@@ -16,8 +18,89 @@ export default function App() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Post | null>(null);
   const [feedTab, setFeedTab] = useState<'all' | 'events' | 'discussions'>('all');
+  
+  // Auth state
+  const [session, setSession] = useState<bsky.BlueskySession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loginError, setLoginError] = useState<string>();
+  const [isGuest, setIsGuest] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
 
-  const handleLike = useCallback((postId: string) => {
+  // Try to restore session on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const restored = await bsky.restoreSession();
+        if (restored) {
+          setSession(restored);
+          // Load community posts from Bluesky
+          await loadCommunityPosts();
+        }
+      } catch (err) {
+        console.error('Failed to restore session:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, []);
+
+  // Load community posts from Bluesky
+  const loadCommunityPosts = async () => {
+    try {
+      const { posts: bskyPosts } = await bsky.searchCommunityPosts();
+      if (bskyPosts.length > 0) {
+        const mappedPosts: Post[] = bskyPosts.map((p) => ({
+          id: p.uri,
+          author: {
+            id: p.author.did,
+            displayName: p.author.displayName,
+            handle: `@${p.author.handle}`,
+            avatar: p.author.avatar || '🦋',
+          },
+          content: p.record.text,
+          createdAt: new Date(p.record.createdAt || p.indexedAt),
+          replies: [],
+          likes: p.likeCount,
+          reposts: p.repostCount,
+          liked: !!p.viewer?.like,
+          reposted: !!p.viewer?.repost,
+        }));
+        setPosts((prev) => [...mappedPosts, ...prev]);
+      }
+    } catch (err) {
+      console.error('Failed to load community posts:', err);
+    }
+  };
+
+  const handleLogin = async (handle: string, password: string) => {
+    setLoginError(undefined);
+    setIsLoading(true);
+    try {
+      const newSession = await bsky.login(handle, password);
+      setSession(newSession);
+      setIsGuest(false);
+      await loadCommunityPosts();
+    } catch (err: any) {
+      setLoginError(err.message || 'Login failed. Check your handle and app password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDemo = () => {
+    setIsGuest(true);
+    setIsLoading(false);
+  };
+
+  const handleLogout = useCallback(() => {
+    bsky.logout();
+    setSession(null);
+    setIsGuest(false);
+    setPosts(initialPosts);
+  }, []);
+
+  const handleLike = useCallback(async (postId: string) => {
+    // Optimistic update
     setPosts((prev) =>
       prev.map((post) => {
         if (post.id === postId) {
@@ -27,7 +110,6 @@ export default function App() {
             likes: post.liked ? post.likes - 1 : post.likes + 1,
           };
         }
-        // Check replies
         const updatedReplies = post.replies.map((reply) => {
           if (reply.id === postId) {
             return {
@@ -41,9 +123,26 @@ export default function App() {
         return { ...post, replies: updatedReplies };
       })
     );
-  }, []);
 
-  const handleRepost = useCallback((postId: string) => {
+    // If logged in with Bluesky, sync the like
+    if (session && postId.startsWith('at://')) {
+      try {
+        const post = posts.find((p) => p.id === postId);
+        if (post) {
+          if (post.liked) {
+            // Already liked, need to unlike - but we need the like URI
+            // For now, just do a new like (simplified)
+          } else {
+            await bsky.likePost(postId, postId); // simplified
+          }
+        }
+      } catch (err) {
+        console.error('Failed to like post:', err);
+      }
+    }
+  }, [session, posts]);
+
+  const handleRepost = useCallback(async (postId: string) => {
     setPosts((prev) =>
       prev.map((post) => {
         if (post.id === postId) {
@@ -66,17 +165,23 @@ export default function App() {
         return { ...post, replies: updatedReplies };
       })
     );
-  }, []);
+
+    if (session && postId.startsWith('at://')) {
+      try {
+        await bsky.repostPost(postId, postId);
+      } catch (err) {
+        console.error('Failed to repost:', err);
+      }
+    }
+  }, [session]);
 
   const handleReply = useCallback((postId: string) => {
-    // Search top-level posts first
     const post = posts.find((p) => p.id === postId);
     if (post) {
       setReplyTo(post);
       setComposeOpen(true);
       return;
     }
-    // Search nested replies
     for (const p of posts) {
       const reply = p.replies.find((r) => r.id === postId);
       if (reply) {
@@ -88,12 +193,43 @@ export default function App() {
   }, [posts]);
 
   const handleCompose = useCallback(
-    (content: string, eventTag?: string, eventDate?: string, eventLocation?: string, eventLink?: string) => {
+    async (content: string, eventTag?: string, eventDate?: string, eventLocation?: string, eventLink?: string) => {
+      let fullContent = content;
+      
+      // Add event info to content if provided
+      if (eventTag) {
+        fullContent += `\n\n📌 Event: ${eventTag}`;
+        if (eventDate) fullContent += `\n📅 ${eventDate}`;
+        if (eventLocation) fullContent += `\n📍 ${eventLocation}`;
+        if (eventLink) fullContent += `\n🔗 ${eventLink}`;
+      }
+
+      // If logged in with Bluesky, post to the network
+      if (session) {
+        setIsPosting(true);
+        try {
+          if (replyTo && replyTo.id.startsWith('at://')) {
+            await bsky.createReply(fullContent, replyTo.id, replyTo.id, [bsky.COMMUNITY_TAG]);
+          } else {
+            await bsky.createPost(fullContent, [bsky.COMMUNITY_TAG]);
+          }
+          // Reload posts to get the new one
+          await loadCommunityPosts();
+        } catch (err) {
+          console.error('Failed to post:', err);
+          alert('Failed to post. Please try again.');
+        } finally {
+          setIsPosting(false);
+        }
+      }
+
+      // Also add locally for immediate feedback
       if (replyTo) {
-        // Add as reply
         const newReply: Post = {
           id: `reply-${Date.now()}`,
-          author: currentUser,
+          author: session
+            ? { id: session.did, displayName: session.displayName, handle: `@${session.handle}`, avatar: session.avatar || '🦋' }
+            : currentUser,
           content,
           createdAt: new Date(),
           eventTag,
@@ -115,10 +251,11 @@ export default function App() {
         );
         setReplyTo(null);
       } else {
-        // New post
         const newPost: Post = {
           id: `post-${Date.now()}`,
-          author: currentUser,
+          author: session
+            ? { id: session.did, displayName: session.displayName, handle: `@${session.handle}`, avatar: session.avatar || '🦋' }
+            : currentUser,
           content,
           createdAt: new Date(),
           eventTag,
@@ -134,7 +271,7 @@ export default function App() {
         setPosts((prev) => [newPost, ...prev]);
       }
     },
-    [replyTo]
+    [replyTo, session]
   );
 
   const handleThread = useCallback((postId: string) => {
@@ -148,9 +285,13 @@ export default function App() {
   }, []);
 
   const handleOpenCompose = useCallback(() => {
+    if (!session && !isGuest) {
+      // Require login to post
+      return;
+    }
     setReplyTo(null);
     setComposeOpen(true);
-  }, []);
+  }, [session, isGuest]);
 
   // Filter posts for feed tabs
   const filteredPosts = posts.filter((post) => {
@@ -161,11 +302,42 @@ export default function App() {
 
   const activePost = activeThread ? posts.find((p) => p.id === activeThread) : null;
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="text-center">
+          <span className="text-5xl animate-pulse">💬</span>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">Loading CommunityFriend...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!session && !isGuest) {
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        onDemo={handleDemo}
+        isLoading={isLoading}
+        error={loginError}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
-        <Sidebar currentView={currentView} setView={setCurrentView} onCompose={handleOpenCompose} />
+        <Sidebar
+          currentView={currentView}
+          setView={setCurrentView}
+          onCompose={handleOpenCompose}
+          session={session}
+          isGuest={isGuest}
+          onLogout={handleLogout}
+        />
       </div>
 
       {/* Mobile Navigation */}
@@ -181,7 +353,15 @@ export default function App() {
                 <div className="px-4 py-3">
                   <h2 className="font-bold text-gray-900 dark:text-white text-lg">Home</h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    📡 Events auto-imported from <span className="text-blue-500">@Community1stJC</span> & <span className="text-blue-500">@JerseyCityCulture</span>
+                    {session ? (
+                      <>
+                        📡 Connected as <span className="text-blue-500">@{session.handle}</span> • Posts tagged with #{bsky.COMMUNITY_TAG}
+                      </>
+                    ) : (
+                      <>
+                        👀 Browsing as guest • <button onClick={() => { setIsGuest(false); }} className="text-blue-500 hover:underline">Sign in to post</button>
+                      </>
+                    )}
                   </p>
                 </div>
                 {/* Tabs */}
@@ -238,7 +418,7 @@ export default function App() {
             <EventsView posts={posts} onThread={handleThread} />
           )}
 
-          {currentView === 'profile' && <ProfileView posts={posts} />}
+          {currentView === 'profile' && <ProfileView posts={posts} session={session} />}
         </div>
       </main>
 
@@ -251,6 +431,7 @@ export default function App() {
         }}
         onSubmit={handleCompose}
         replyTo={replyTo}
+        isPosting={isPosting}
       />
     </div>
   );

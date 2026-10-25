@@ -1,12 +1,16 @@
 import { ViewType } from '../types';
+import { BlueskySession } from '../bluesky';
 
 interface SidebarProps {
   currentView: ViewType;
   setView: (view: ViewType) => void;
   onCompose: () => void;
+  session: BlueskySession | null;
+  isGuest: boolean;
+  onLogout: () => void;
 }
 
-export default function Sidebar({ currentView, setView, onCompose }: SidebarProps) {
+export default function Sidebar({ currentView, setView, onCompose, session, isGuest, onLogout }: SidebarProps) {
   const navItems: { view: ViewType; icon: string; label: string }[] = [
     { view: 'feed', icon: '🏠', label: 'Home Feed' },
     { view: 'events', icon: '📅', label: 'Events' },
@@ -73,11 +77,42 @@ export default function Sidebar({ currentView, setView, onCompose }: SidebarProp
 
       {/* User Info */}
       <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
-        <span className="text-2xl">🧑‍💻</span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">You</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@you.cosmospark</p>
-        </div>
+        {session ? (
+          <>
+            {session.avatar ? (
+              <img src={session.avatar} alt="" className="w-10 h-10 rounded-full" />
+            ) : (
+              <span className="text-2xl">🦋</span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{session.displayName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@{session.handle}</p>
+            </div>
+            <button
+              onClick={onLogout}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              title="Sign out"
+            >
+              🚪
+            </button>
+          </>
+        ) : isGuest ? (
+          <>
+            <span className="text-2xl">👀</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">Guest</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Browse only</p>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="text-2xl">🧑‍💻</span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">You</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@you.cosmospark</p>
+            </div>
+          </>
+        )}
       </div>
     </aside>
   );
