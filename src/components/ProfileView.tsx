@@ -5,7 +5,7 @@ interface ProfileViewProps {
 }
 
 export default function ProfileView({ posts }: ProfileViewProps) {
-  const userPosts = posts.filter((p) => p.author.id === 'user-1');
+  const userPosts = posts.filter((p) => p.author?.id === 'user-1');
 
   return (
     <div>

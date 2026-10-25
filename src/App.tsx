@@ -88,7 +88,7 @@ export default function App() {
   }, [posts]);
 
   const handleCompose = useCallback(
-    (content: string, eventTag?: string, eventDate?: string, eventLocation?: string) => {
+    (content: string, eventTag?: string, eventDate?: string, eventLocation?: string, eventLink?: string) => {
       if (replyTo) {
         // Add as reply
         const newReply: Post = {
@@ -99,6 +99,7 @@ export default function App() {
           eventTag,
           eventDate,
           eventLocation,
+          eventLink,
           replies: [],
           likes: 0,
           reposts: 0,
@@ -123,6 +124,7 @@ export default function App() {
           eventTag,
           eventDate,
           eventLocation,
+          eventLink,
           replies: [],
           likes: 0,
           reposts: 0,
@@ -178,6 +180,9 @@ export default function App() {
               <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 z-10">
                 <div className="px-4 py-3">
                   <h2 className="font-bold text-gray-900 dark:text-white text-lg">Home</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    📡 Events auto-imported from <span className="text-blue-500">@Community1stJC</span> & <span className="text-blue-500">@JerseyCityCulture</span>
+                  </p>
                 </div>
                 {/* Tabs */}
                 <div className="flex border-b border-gray-100 dark:border-gray-800">

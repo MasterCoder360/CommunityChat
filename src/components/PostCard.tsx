@@ -34,6 +34,16 @@ export default function PostCard({ post, onReply, onLike, onRepost, onThread, is
       }`}
       onClick={() => !isThread && onThread(post.id)}
     >
+      {/* Auto-imported badge */}
+      {post.isAutoImported && (
+        <div className="flex items-center gap-2 mb-2 ml-13 text-xs text-gray-500 dark:text-gray-400">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400">
+            <span>📡</span>
+            <span>Auto-imported from {post.sourceHandle}</span>
+          </span>
+        </div>
+      )}
+
       <div className="flex gap-3">
         {/* Avatar */}
         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center text-xl">
@@ -47,6 +57,9 @@ export default function PostCard({ post, onReply, onLike, onRepost, onThread, is
             <span className="font-semibold text-sm text-gray-900 dark:text-white">
               {author.displayName}
             </span>
+            {post.isAutoImported && (
+              <span className="text-blue-500 text-xs">✓</span>
+            )}
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {author.handle}
             </span>
@@ -64,16 +77,32 @@ export default function PostCard({ post, onReply, onLike, onRepost, onThread, is
           {/* Event Tag */}
           {post.eventTag && (
             <div className="mt-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
                   📌 Event
                 </span>
+                {post.sourceHandle && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    via {post.sourceHandle}
+                  </span>
+                )}
               </div>
               <p className="text-sm font-medium text-gray-900 dark:text-white">{post.eventTag}</p>
               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
                 {post.eventDate && <span>📅 {post.eventDate}</span>}
                 {post.eventLocation && <span>📍 {post.eventLocation}</span>}
               </div>
+              {post.eventLink && (
+                <a
+                  href={post.eventLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block mt-2 text-xs text-blue-500 hover:text-blue-600 underline"
+                >
+                  View original →
+                </a>
+              )}
             </div>
           )}
 

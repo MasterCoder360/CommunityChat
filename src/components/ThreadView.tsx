@@ -29,6 +29,16 @@ export default function ThreadView({ post, onBack, onReply, onLike, onRepost, on
 
       {/* Original Post */}
       <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700">
+        {/* Auto-imported badge */}
+        {post.isAutoImported && (
+          <div className="mb-3">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-xs">
+              <span>📡</span>
+              <span>Auto-imported from {post.sourceHandle}</span>
+            </span>
+          </div>
+        )}
+
         <div className="flex gap-3">
           <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center text-2xl">
             {author.avatar}
@@ -36,6 +46,7 @@ export default function ThreadView({ post, onBack, onReply, onLike, onRepost, on
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className="font-bold text-gray-900 dark:text-white">{author.displayName}</span>
+              {post.isAutoImported && <span className="text-blue-500 text-sm">✓</span>}
               <span className="text-sm text-gray-500 dark:text-gray-400">{author.handle}</span>
             </div>
             <p className="mt-2 text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
@@ -45,14 +56,31 @@ export default function ThreadView({ post, onBack, onReply, onLike, onRepost, on
             {/* Event Tag */}
             {post.eventTag && (
               <div className="mt-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-                  📌 Event
-                </span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                    📌 Event
+                  </span>
+                  {post.sourceHandle && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      via {post.sourceHandle}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">{post.eventTag}</p>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {post.eventDate && <span>📅 {post.eventDate}</span>}
                   {post.eventLocation && <span>📍 {post.eventLocation}</span>}
                 </div>
+                {post.eventLink && (
+                  <a
+                    href={post.eventLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-xs text-blue-500 hover:text-blue-600 underline"
+                  >
+                    View original →
+                  </a>
+                )}
               </div>
             )}
 

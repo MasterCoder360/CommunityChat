@@ -25,7 +25,22 @@ export default function EventsView({ posts, onThread }: EventsViewProps) {
       {/* Header */}
       <div className="sticky top-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 py-3 z-10">
         <h2 className="font-bold text-gray-900 dark:text-white text-lg">📅 Community Events</h2>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Events shared by the community</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Auto-imported from community sources + community posts</p>
+      </div>
+
+      {/* Sources Info */}
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-medium uppercase tracking-wide">Event Sources</p>
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-xs">
+            <span>🏘️</span>
+            <span className="text-gray-700 dark:text-gray-300">@Community1stJC</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-xs">
+            <span>🎭</span>
+            <span className="text-gray-700 dark:text-gray-300">@JerseyCityCulture</span>
+          </span>
+        </div>
       </div>
 
       {/* Events List */}
@@ -46,13 +61,19 @@ export default function EventsView({ posts, onThread }: EventsViewProps) {
                   {post.eventDate && <span>📅 {post.eventDate}</span>}
                   {post.eventLocation && <span>· 📍 {post.eventLocation}</span>}
                 </div>
+                {/* Source badge */}
+                {post.sourceHandle && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-xs">{post.sourceAvatar}</span>
+                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{post.sourceHandle}</span>
+                  </div>
+                )}
                 <p className="mt-1.5 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
                   {post.content}
                 </p>
                 <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
                   <span>💬 {post.replies.length} replies</span>
                   <span>❤️ {post.likes} likes</span>
-                  <span>by {post.author.displayName}</span>
                 </div>
               </div>
             </div>

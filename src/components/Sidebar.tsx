@@ -16,7 +16,7 @@ export default function Sidebar({ currentView, setView, onCompose }: SidebarProp
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col p-4 z-10">
       {/* Logo */}
-      <div className="flex items-center gap-2 mb-8 px-2">
+      <div className="flex items-center gap-2 mb-6 px-2">
         <span className="text-3xl">💬</span>
         <div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">CommunityFriend</h1>
@@ -41,6 +41,27 @@ export default function Sidebar({ currentView, setView, onCompose }: SidebarProp
           </button>
         ))}
       </nav>
+
+      {/* Sources Section */}
+      <div className="mb-4 p-3 rounded-xl bg-gray-50 dark:bg-gray-800">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Event Sources</p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🏘️</span>
+            <div>
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">CommunityFirst JC</p>
+              <p className="text-[10px] text-gray-400">community1stjc.com</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">🎭</span>
+            <div>
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Jersey City Culture</p>
+              <p className="text-[10px] text-gray-400">jerseycityculture.org</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Compose Button */}
       <button

@@ -13,6 +13,11 @@ export interface Post {
   eventTag?: string;
   eventDate?: string;
   eventLocation?: string;
+  eventLink?: string;
+  source?: string;       // e.g. "community1stjc.com"
+  sourceHandle?: string; // e.g. "@Community1st JC"
+  sourceAvatar?: string; // emoji for source
+  isAutoImported?: boolean;
   replies: Post[];
   likes: number;
   reposts: number;

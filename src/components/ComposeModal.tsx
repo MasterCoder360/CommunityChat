@@ -4,7 +4,7 @@ import { Post } from '../types';
 interface ComposeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (content: string, eventTag?: string, eventDate?: string, eventLocation?: string) => void;
+  onSubmit: (content: string, eventTag?: string, eventDate?: string, eventLocation?: string, eventLink?: string) => void;
   replyTo?: Post | null;
 }
 
@@ -14,16 +14,18 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
   const [eventTag, setEventTag] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventLocation, setEventLocation] = useState('');
+  const [eventLink, setEventLink] = useState('');
 
   if (!isOpen) return null;
 
   const handleSubmit = () => {
     if (!content.trim()) return;
-    onSubmit(content, eventTag || undefined, eventDate || undefined, eventLocation || undefined);
+    onSubmit(content, eventTag || undefined, eventDate || undefined, eventLocation || undefined, eventLink || undefined);
     setContent('');
     setEventTag('');
     setEventDate('');
     setEventLocation('');
+    setEventLink('');
     setShowEventFields(false);
     onClose();
   };
@@ -104,6 +106,13 @@ export default function ComposeModal({ isOpen, onClose, onSubmit, replyTo }: Com
                 value={eventLocation}
                 onChange={(e) => setEventLocation(e.target.value)}
                 placeholder="Location"
+                className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
+              />
+              <input
+                type="url"
+                value={eventLink}
+                onChange={(e) => setEventLink(e.target.value)}
+                placeholder="Link to event (optional)"
                 className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-blue-400"
               />
             </div>
