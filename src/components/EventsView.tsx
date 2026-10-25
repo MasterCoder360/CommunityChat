@@ -6,7 +6,7 @@ interface EventsViewProps {
 }
 
 export default function EventsView({ posts, onThread }: EventsViewProps) {
-  const eventPosts = posts.filter((p) => p.eventTag);
+  const eventPosts = posts.filter((p) => p.eventTag && p.author);
 
   if (eventPosts.length === 0) {
     return (

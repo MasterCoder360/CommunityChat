@@ -69,10 +69,21 @@ export default function App() {
   }, []);
 
   const handleReply = useCallback((postId: string) => {
+    // Search top-level posts first
     const post = posts.find((p) => p.id === postId);
     if (post) {
       setReplyTo(post);
       setComposeOpen(true);
+      return;
+    }
+    // Search nested replies
+    for (const p of posts) {
+      const reply = p.replies.find((r) => r.id === postId);
+      if (reply) {
+        setReplyTo(reply);
+        setComposeOpen(true);
+        return;
+      }
     }
   }, [posts]);
 

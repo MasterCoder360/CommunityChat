@@ -18,7 +18,7 @@ export const users: User[] = [
 export const initialPosts: Post[] = [
   {
     id: 'post-1',
-    author: users[5],
+    author: users[4],
     content: '🎉 The Fall Carnival @ Pershing Field is coming up! Sept 10-28. Who\'s planning to go? Let\'s coordinate a group meetup!',
     createdAt: new Date('2025-09-01T10:00:00'),
     eventTag: 'Fall Carnival @ Pershing Field',

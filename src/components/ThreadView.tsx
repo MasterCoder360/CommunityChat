@@ -11,6 +11,9 @@ interface ThreadViewProps {
 }
 
 export default function ThreadView({ post, onBack, onReply, onLike, onRepost, onComposeReply }: ThreadViewProps) {
+  // Defensive fallback if author is somehow undefined
+  const author = post.author ?? { id: 'unknown', displayName: 'Unknown', handle: '@unknown', avatar: '❓' };
+
   return (
     <div>
       {/* Header */}
@@ -28,12 +31,12 @@ export default function ThreadView({ post, onBack, onReply, onLike, onRepost, on
       <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex gap-3">
           <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center text-2xl">
-            {post.author.avatar}
+            {author.avatar}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-900 dark:text-white">{post.author.displayName}</span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{post.author.handle}</span>
+              <span className="font-bold text-gray-900 dark:text-white">{author.displayName}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{author.handle}</span>
             </div>
             <p className="mt-2 text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
               {post.content}

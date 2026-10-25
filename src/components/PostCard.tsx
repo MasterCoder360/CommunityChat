@@ -24,6 +24,9 @@ function formatTime(date: Date): string {
 }
 
 export default function PostCard({ post, onReply, onLike, onRepost, onThread, isThread = false }: PostCardProps) {
+  // Defensive fallback if author is somehow undefined
+  const author = post.author ?? { id: 'unknown', displayName: 'Unknown', handle: '@unknown', avatar: '❓' };
+
   return (
     <article
       className={`border-b border-gray-200 dark:border-gray-700 px-4 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer ${
@@ -34,7 +37,7 @@ export default function PostCard({ post, onReply, onLike, onRepost, onThread, is
       <div className="flex gap-3">
         {/* Avatar */}
         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center text-xl">
-          {post.author.avatar}
+          {author.avatar}
         </div>
 
         {/* Content */}
@@ -42,10 +45,10 @@ export default function PostCard({ post, onReply, onLike, onRepost, onThread, is
           {/* Header */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-sm text-gray-900 dark:text-white">
-              {post.author.displayName}
+              {author.displayName}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              {post.author.handle}
+              {author.handle}
             </span>
             <span className="text-sm text-gray-400 dark:text-gray-500">·</span>
             <span className="text-sm text-gray-400 dark:text-gray-500">
